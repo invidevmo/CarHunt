@@ -7,6 +7,7 @@ import { RoomChatModal } from './RoomChatModal';
 import { GameHistoryModal } from './GameHistoryModal';
 import { calculateProximity } from '../utils/proximity';
 import { LicensePlate } from './LicensePlate';
+import { getColorHex } from '../utils/carColors';
 import { 
   Camera, 
   QrCode,
@@ -18,6 +19,7 @@ import {
   Car, 
   Shield, 
   ChevronDown, 
+  ChevronUp,
   Eye, 
   CheckCircle2, 
   Radio, 
@@ -27,7 +29,8 @@ import {
   Flag,
   RotateCcw,
   Crown,
-  X
+  X,
+  Users
 } from 'lucide-react';
 import { sounds } from '../utils/audio';
 
@@ -46,12 +49,14 @@ export function GameView({
   setAutoCenter,
 }) {
   const [showEvents, setShowEvents] = useState(false);
+  const [drawerTab, setDrawerTab] = useState('EVENTS');
   const [showQrModal, setShowQrModal] = useState(false);
   const [showScannerModal, setShowScannerModal] = useState(false);
   const [showHudMode, setShowHudMode] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showCaptainModal, setShowCaptainModal] = useState(false);
+  const [proximityExpanded, setProximityExpanded] = useState(false);
   const [unreadChatCount, setUnreadChatCount] = useState(0);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [catchError, setCatchError] = useState(null);
@@ -148,48 +153,50 @@ export function GameView({
 
   return (
     <div className="relative w-full h-[100dvh] flex flex-col bg-slate-950 overflow-hidden select-none">
-      <div className="absolute top-0 left-0 right-0 z-[1000] p-2 sm:p-4 pt-safe pointer-events-none">
-        <div className="max-w-xl mx-auto flex items-center justify-between gap-1.5 sm:gap-2">
-          <div className="pointer-events-auto glass-panel rounded-2xl px-2.5 sm:px-3.5 py-1.5 sm:py-2 shadow-2xl flex items-center gap-2 sm:gap-2.5 border-white/10 shrink-0">
+      <div className="absolute top-0 left-0 right-0 z-[1000] p-2 sm:p-3.5 pt-safe pointer-events-none">
+        <div className="max-w-xl mx-auto flex items-center justify-between gap-1.5">
+          <div className="pointer-events-auto glass-panel rounded-2xl px-2.5 sm:px-3 py-1.5 shadow-2xl flex items-center gap-2 border-white/10 shrink-0">
             <div className="flex items-center gap-1.5">
               <span className={`w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full animate-ping shrink-0 ${isHidingPhase ? 'bg-amber-400' : 'bg-rose-500'}`} />
               <div className="flex flex-col">
-                <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-slate-400 leading-none">
+                <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 leading-none">
                   {isHidingPhase ? 'Ukrywanie' : 'Polowanie'}
                 </span>
-                <span className="text-base sm:text-2xl font-black font-mono tracking-tight text-white leading-tight">
+                <span className="text-base sm:text-xl font-black font-mono tracking-tight text-white leading-tight">
                   {formatTime(room.timeRemaining)}
                 </span>
               </div>
             </div>
 
-            <div className="h-5 sm:h-6 w-[1px] bg-white/10" />
+            <div className="h-5 w-[1px] bg-white/10" />
 
             <div className="flex flex-col text-left">
-              <span className="text-[7px] sm:text-[8px] uppercase tracking-wider text-slate-400 font-extrabold leading-none">Cele</span>
-              <span className="text-[11px] sm:text-xs font-mono font-bold text-amber-400 leading-tight">
+              <span className="text-[7px] uppercase tracking-wider text-slate-400 font-extrabold leading-none">Cele</span>
+              <span className="text-[11px] font-mono font-bold text-amber-400 leading-tight">
                 {hidersStats.remaining}/{hidersStats.total}
               </span>
             </div>
 
             <div className="flex items-center gap-1 text-[11px] font-extrabold pl-1.5 border-l border-white/10">
               {isCaught ? (
-                <AlertTriangle className="w-3 h-3 text-rose-400" />
+                <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
               ) : isHider ? (
-                <Car className="w-3 h-3 text-purple-300" />
+                <Car className="w-3.5 h-3.5 text-purple-300" />
               ) : (
-                <Shield className="w-3 h-3 text-cyan-300" />
+                <Shield className="w-3.5 h-3.5 text-cyan-300" />
               )}
-              <span className={`hidden sm:inline ${isCaught ? 'text-rose-400' : isHider ? 'text-purple-300' : 'text-cyan-300'}`}>
+              <span className={`text-[10px] sm:text-[11px] font-black uppercase ${
+                isCaught ? 'text-rose-400' : isHider ? 'text-purple-300' : 'text-cyan-300'
+              }`}>
                 {isCaught ? 'Złapany' : isHider ? 'Uciekinier' : 'Łowca'}
               </span>
             </div>
           </div>
 
-          <div className="pointer-events-auto flex items-center gap-1 glass-panel rounded-2xl p-1 sm:p-1.5 shadow-2xl border-white/10 shrink-0">
+          <div className="pointer-events-auto flex items-center gap-1.5 shrink-0">
             <button
               onClick={() => setShowHudMode(true)}
-              className="px-2 sm:px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-xs flex items-center gap-1 shadow-lg shadow-amber-500/25 active:scale-95 transition cursor-pointer border border-amber-400/30"
+              className="px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-xs flex items-center gap-1 shadow-lg shadow-amber-500/25 active:scale-95 transition cursor-pointer border border-amber-400/30"
               title="Otwórz pełnoekranowy tryb taktyczny HUD"
             >
               <Gauge className="w-3.5 h-3.5" />
@@ -201,103 +208,125 @@ export function GameView({
                 setShowChat(true);
                 setUnreadChatCount(0);
               }}
-              className="relative p-1.5 sm:p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800/80 transition cursor-pointer"
+              className="relative p-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white border border-white/10 transition cursor-pointer shadow-lg active:scale-95"
               title="Czat pokoju"
             >
-              <MessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400" />
+              <MessageSquare className="w-4 h-4 text-amber-400" />
               {unreadChatCount > 0 && (
                 <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center animate-bounce shadow">
                   {unreadChatCount}
                 </span>
               )}
             </button>
-
-            <button
-              onClick={toggleSound}
-              className="p-1.5 sm:p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800/80 transition cursor-pointer"
-              title="Dźwięk"
-            >
-              {soundEnabled ? <Volume2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400" /> : <VolumeX className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-500" />}
-            </button>
-
-            <button
-              onClick={() => setAutoCenter(!autoCenter)}
-              className={`p-1.5 sm:p-2 rounded-xl transition cursor-pointer ${autoCenter ? 'text-amber-400 bg-amber-400/10' : 'text-slate-400 hover:bg-slate-800/80'}`}
-              title="Centruj mapę na mnie"
-            >
-              <LocateFixed className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            </button>
-
-            <button
-              onClick={() => setShowEvents(!showEvents)}
-              className="p-1.5 sm:p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800/80 transition cursor-pointer"
-              title="Dziennik zdarzeń"
-            >
-              <ListOrdered className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            </button>
-
-            {myPlayer?.isHost && (
-              <button
-                onClick={() => setShowCaptainModal(true)}
-                className="px-2 sm:px-2.5 py-1.5 rounded-xl bg-rose-600/90 hover:bg-rose-500 text-white font-black text-xs flex items-center gap-1 shadow-lg shadow-rose-600/30 active:scale-95 transition cursor-pointer border border-rose-400/40 ml-0.5"
-                title="Panel Kapitana (Zakończ grę w dowolnym momencie)"
-              >
-                <Flag className="w-3.5 h-3.5 text-white" />
-                <span className="hidden sm:inline">Koniec</span>
-              </button>
-            )}
           </div>
         </div>
 
         {proximity && isHunting && (
-          <div 
-            onClick={() => setShowHudMode(true)}
-            className="max-w-xl mx-auto mt-1.5 pointer-events-auto glass-panel border border-white/10 hover:border-amber-400/50 p-2 sm:p-2.5 rounded-2xl shadow-xl flex items-center justify-between gap-2 cursor-pointer transition active:scale-[0.99] relative overflow-hidden"
-            title="Kliknij, aby otworzyć pełny tryb HUD"
-          >
-            <div className="flex items-center gap-2 min-w-0">
-              <div className={`p-1.5 rounded-xl shrink-0 ${
-                isHider 
-                  ? (proximity.isInsideCircle ? 'bg-rose-500/20 text-rose-400 animate-pulse' : 'bg-purple-500/20 text-purple-300') 
-                  : (proximity.isInsideCircle ? 'bg-emerald-500/20 text-emerald-400 animate-pulse' : 'bg-cyan-500/20 text-cyan-300')
-              }`}>
-                {isHider ? <Radio className="w-4 h-4" /> : <Shield className="w-4 h-4" />}
-              </div>
-
-              <div className="text-left min-w-0">
-                <span className="text-[8px] uppercase font-bold tracking-wider text-slate-400 block truncate">
-                  {isHider ? 'Najbliższy Łowca' : 'Strefa Celu Radaru'}
-                </span>
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="text-xs font-bold text-white truncate max-w-[110px] sm:max-w-none">{proximity.targetName}</span>
-                  <span className="text-[10px] text-slate-300 font-mono truncate">({proximity.carModel || 'Auto'})</span>
-                  {proximity.carPlate && <LicensePlate plate={proximity.carPlate} size="xs" />}
-                </div>
-              </div>
-            </div>
-
-            <div className="text-right shrink-0">
-              <div className="flex items-baseline justify-end gap-0.5">
-                <span className={`text-xl sm:text-2xl font-black font-mono leading-none ${
+          <div className="max-w-xl mx-auto mt-1.5 pointer-events-auto">
+            {!proximityExpanded ? (
+              <button
+                type="button"
+                onClick={() => setProximityExpanded(true)}
+                className={`w-full glass-panel border p-2 rounded-2xl shadow-xl flex items-center justify-between gap-2 cursor-pointer transition active:scale-[0.99] animate-fade-in ${
                   isHider 
-                    ? (proximity.threatLevel === 'CRITICAL' ? 'text-rose-500 animate-pulse' : proximity.threatLevel === 'DANGER' ? 'text-orange-400' : 'text-amber-400') 
-                    : (proximity.isInsideCircle ? 'text-emerald-400 font-bold' : 'text-cyan-400')
-                }`}>
-                  {isHider ? proximity.distance : proximity.distToCircleEdge}
-                </span>
-                <span className="text-[10px] font-bold font-mono text-slate-400">m</span>
+                    ? (proximity.isInsideCircle ? 'border-rose-500/50 bg-rose-950/40' : 'border-purple-500/30 bg-slate-900/80') 
+                    : (proximity.isInsideCircle ? 'border-emerald-500/50 bg-emerald-950/40' : 'border-cyan-500/30 bg-slate-900/80')
+                }`}
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className={`w-2 h-2 rounded-full animate-ping shrink-0 ${
+                    isHider 
+                      ? (proximity.isInsideCircle ? 'bg-rose-500' : 'bg-purple-400') 
+                      : (proximity.isInsideCircle ? 'bg-emerald-400' : 'bg-cyan-400')
+                  }`} />
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-300">
+                    {isHider ? 'Najbliższy Łowca:' : 'Strefa Radaru:'}
+                  </span>
+                  <span className="text-xs font-bold text-white truncate">{proximity.targetName}</span>
+                  <span className="text-[10px] text-slate-400 font-mono">({proximity.carModel || 'Auto'})</span>
+                </div>
+
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <strong className={`text-base font-black font-mono ${
+                    isHider 
+                      ? (proximity.threatLevel === 'CRITICAL' ? 'text-rose-400 animate-pulse' : 'text-amber-400') 
+                      : (proximity.isInsideCircle ? 'text-emerald-400' : 'text-cyan-400')
+                  }`}>
+                    {isHider ? `${proximity.distance}m` : `${proximity.distToCircleEdge}m`}
+                  </strong>
+                  <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                </div>
+              </button>
+            ) : (
+              <div 
+                className="glass-panel border border-amber-400/50 p-2.5 rounded-2xl shadow-2xl flex flex-col gap-2 transition animate-fade-in relative"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className={`p-1.5 rounded-xl shrink-0 ${
+                      isHider 
+                        ? (proximity.isInsideCircle ? 'bg-rose-500/20 text-rose-400 animate-pulse' : 'bg-purple-500/20 text-purple-300') 
+                        : (proximity.isInsideCircle ? 'bg-emerald-500/20 text-emerald-400 animate-pulse' : 'bg-cyan-500/20 text-cyan-300')
+                    }`}>
+                      {isHider ? <Radio className="w-4 h-4" /> : <Shield className="w-4 h-4" />}
+                    </div>
+
+                    <div className="text-left min-w-0">
+                      <span className="text-[8px] uppercase font-bold tracking-wider text-slate-400 block truncate">
+                        {isHider ? 'Najbliższy Łowca' : 'Strefa Celu Radaru'}
+                      </span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-xs font-bold text-white truncate">{proximity.targetName}</span>
+                        <span className="text-[10px] text-slate-300 font-mono truncate">({proximity.carModel || 'Auto'})</span>
+                        {proximity.carPlate && <LicensePlate plate={proximity.carPlate} size="xs" />}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <div className="text-right shrink-0">
+                      <div className="flex items-baseline justify-end gap-0.5">
+                        <span className={`text-xl font-black font-mono leading-none ${
+                          isHider 
+                            ? (proximity.threatLevel === 'CRITICAL' ? 'text-rose-500 animate-pulse' : 'text-amber-400') 
+                            : (proximity.isInsideCircle ? 'text-emerald-400 font-bold' : 'text-cyan-400')
+                        }`}>
+                          {isHider ? proximity.distance : proximity.distToCircleEdge}
+                        </span>
+                        <span className="text-[10px] font-bold font-mono text-slate-400">m</span>
+                      </div>
+                      <span className="text-[8px] text-slate-400 font-mono block">
+                        {isHider 
+                          ? (proximity.isInsideCircle ? 'W TWOIM OKRĘGU!' : `${proximity.distToCircleEdge}m do okręgu`)
+                          : (proximity.isInsideCircle ? 'W OKRĘGU RADARU!' : 'do krawędzi')}
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setProximityExpanded(false)}
+                      className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+                    >
+                      <ChevronUp className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowHudMode(true)}
+                  className="w-full py-1.5 px-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-amber-300 text-[11px] font-bold flex items-center justify-center gap-1 transition cursor-pointer"
+                >
+                  <Gauge className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Przełącz na Pełny HUD (Odbicie na Szybę)</span>
+                </button>
               </div>
-              <span className="text-[8px] sm:text-[9px] text-slate-400 font-mono block">
-                {isHider 
-                  ? (proximity.isInsideCircle ? 'W TWOIM OKRĘGU!' : `${proximity.distToCircleEdge}m do okręgu`)
-                  : (proximity.isInsideCircle ? 'W OKRĘGU RADARU!' : 'do krawędzi')}
-              </span>
-            </div>
+            )}
           </div>
         )}
 
         {isHider && isCaught && (
-          <div className="max-w-xl mx-auto mt-1.5 pointer-events-auto glass-panel border border-rose-500/40 text-rose-200 text-xs p-2.5 rounded-2xl shadow-xl flex items-center gap-2">
+          <div className="max-w-xl mx-auto mt-1.5 pointer-events-auto glass-panel border border-rose-500/40 text-rose-200 text-xs p-2.5 rounded-2xl shadow-xl flex items-center gap-2 animate-fade-in">
             <Eye className="w-4 h-4 text-rose-400 shrink-0" />
             <div>
               <strong className="text-rose-300 block text-xs">Schwytany przez: {myPlayer.caughtBy || 'Łowcę'}!</strong>
@@ -341,10 +370,53 @@ export function GameView({
         )}
 
         {catchError && (
-          <div className="max-w-xl mx-auto mt-1.5 pointer-events-auto bg-amber-500 text-slate-950 font-bold text-xs p-2 rounded-xl shadow-lg flex items-center gap-2">
+          <div className="max-w-xl mx-auto mt-1.5 pointer-events-auto bg-amber-500 text-slate-950 font-bold text-xs p-2 rounded-xl shadow-lg flex items-center gap-2 animate-fade-in">
             <AlertTriangle className="w-4 h-4 shrink-0" />
             <span>{catchError}</span>
           </div>
+        )}
+      </div>
+
+      <div className="fixed right-2.5 sm:right-4 top-20 z-[1000] flex flex-col gap-2 pointer-events-auto">
+        <button
+          onClick={() => setAutoCenter(!autoCenter)}
+          className={`p-2.5 rounded-2xl shadow-xl transition cursor-pointer active:scale-95 border backdrop-blur-md ${
+            autoCenter 
+              ? 'bg-amber-500/20 text-amber-300 border-amber-400/60 shadow-amber-500/20' 
+              : 'bg-slate-900/90 text-slate-400 border-white/10 hover:text-white hover:bg-slate-800'
+          }`}
+          title="Centruj mapę na moje auto"
+        >
+          <LocateFixed className="w-4 h-4" />
+        </button>
+
+        <button
+          onClick={toggleSound}
+          className="p-2.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white border border-white/10 shadow-xl transition cursor-pointer active:scale-95 backdrop-blur-md"
+          title="Przełącz dźwięk"
+        >
+          {soundEnabled ? <Volume2 className="w-4 h-4 text-emerald-400" /> : <VolumeX className="w-4 h-4 text-slate-500" />}
+        </button>
+
+        <button
+          onClick={() => setShowEvents(!showEvents)}
+          className="p-2.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white border border-white/10 shadow-xl transition cursor-pointer active:scale-95 backdrop-blur-md relative"
+          title="Dziennik zdarzeń & Załogi"
+        >
+          <ListOrdered className="w-4 h-4 text-amber-400" />
+          {room.events?.length > 0 && (
+            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-cyan-400 ring-2 ring-slate-950" />
+          )}
+        </button>
+
+        {myPlayer?.isHost && (
+          <button
+            onClick={() => setShowCaptainModal(true)}
+            className="p-2.5 rounded-2xl bg-rose-600/90 hover:bg-rose-500 text-white shadow-xl shadow-rose-600/30 transition cursor-pointer active:scale-95 border border-rose-400/50 backdrop-blur-md"
+            title="Panel Kapitana (Zakończ grę)"
+          >
+            <Flag className="w-4 h-4 text-white" />
+          </button>
         )}
       </div>
 
@@ -365,12 +437,12 @@ export function GameView({
         />
       </div>
 
-      <div className="absolute bottom-0 left-0 right-0 z-[1000] p-2.5 sm:p-5 pb-safe pointer-events-none">
+      <div className="absolute bottom-0 left-0 right-0 z-[1000] p-2.5 sm:p-4 pb-safe pointer-events-none">
         <div className="max-w-md mx-auto pointer-events-auto space-y-2">
           {isSeeker && isHunting && (
             <button
               onClick={() => setShowScannerModal(true)}
-              className="w-full py-3.5 sm:py-5 px-5 rounded-2xl font-black text-sm sm:text-base uppercase tracking-wider bg-gradient-to-r from-red-600 via-rose-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white shadow-2xl shadow-red-600/40 active:scale-[0.98] transition flex items-center justify-center gap-2.5 border border-red-400/50 cursor-pointer glow-red"
+              className="w-full py-4 sm:py-5 px-5 rounded-2xl font-black text-sm sm:text-base uppercase tracking-wider bg-gradient-to-r from-red-600 via-rose-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white shadow-2xl shadow-red-600/40 active:scale-[0.98] transition flex items-center justify-center gap-2.5 border border-red-400/50 cursor-pointer glow-red"
             >
               <Camera className="w-5 sm:w-6 h-5 sm:h-6 animate-pulse" />
               <span>SKANUJ KOD QR (MAM CIĘ!)</span>
@@ -381,7 +453,7 @@ export function GameView({
             <div className="space-y-1.5">
               <button
                 onClick={() => setShowQrModal(true)}
-                className="w-full py-2.5 sm:py-3.5 px-3.5 rounded-2xl font-bold bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 hover:from-purple-500 hover:to-indigo-500 text-white shadow-2xl flex items-center justify-between border border-purple-400/40 active:scale-[0.98] transition cursor-pointer glow-purple"
+                className="w-full py-3 px-3.5 rounded-2xl font-bold bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 hover:from-purple-500 hover:to-indigo-500 text-white shadow-2xl flex items-center justify-between border border-purple-400/40 active:scale-[0.98] transition cursor-pointer glow-purple"
               >
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
@@ -408,29 +480,52 @@ export function GameView({
           {isSeeker && isHidingPhase && (
             <div className="glass-panel border-cyan-500/30 rounded-2xl p-3 shadow-2xl text-center text-xs text-slate-300">
               <div className="font-bold text-white mb-0.5">Uciekinierzy ({hidersStats.total} aut) szukają kryjówek...</div>
-              <span>Łowcy ruszają za {formatTime(room.timeRemaining)}! Bądźcie gotowi do skanowania kodów.</span>
+              <span>Łowcy ruszają za {formatTime(room.timeRemaining)}! Bądźcie gotowi do pościgu.</span>
             </div>
           )}
         </div>
       </div>
 
       {showEvents && (
-        <div className="absolute inset-x-0 bottom-0 top-16 z-[1100] max-w-lg mx-auto glass-panel border-t border-white/10 p-4 rounded-t-3xl shadow-2xl flex flex-col pointer-events-auto">
+        <div className="absolute inset-x-0 bottom-0 top-16 z-[1100] max-w-lg mx-auto glass-panel border-t border-white/10 p-4 rounded-t-3xl shadow-2xl flex flex-col pointer-events-auto animate-fade-in">
           <div className="flex items-center justify-between pb-3 border-b border-white/10">
-            <h3 className="font-bold text-sm text-white flex items-center gap-2">
-              <ListOrdered className="w-4 h-4 text-amber-400" /> Dziennik zdarzeń rozgrywki
-            </h3>
+            <div className="flex items-center gap-2 p-1 bg-slate-900 rounded-xl border border-white/10 text-xs font-black">
+              <button
+                onClick={() => setDrawerTab('EVENTS')}
+                className={`px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1.5 ${
+                  drawerTab === 'EVENTS'
+                    ? 'bg-amber-500 text-slate-950 shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <ListOrdered className="w-3.5 h-3.5" />
+                <span>Dziennik ({room.events?.length || 0})</span>
+              </button>
+
+              <button
+                onClick={() => setDrawerTab('PLAYERS')}
+                className={`px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1.5 ${
+                  drawerTab === 'PLAYERS'
+                    ? 'bg-cyan-500 text-slate-950 shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Users className="w-3.5 h-3.5" />
+                <span>Załogi ({room.players?.length || 0})</span>
+              </button>
+            </div>
+
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setShowHistory(true)}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 text-xs font-bold transition cursor-pointer"
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 text-xs font-bold transition cursor-pointer"
               >
                 <History className="w-3.5 h-3.5" />
                 <span>Historia</span>
               </button>
               <button
                 onClick={() => setShowEvents(false)}
-                className="p-1 rounded-lg bg-slate-800 text-slate-400 hover:text-white cursor-pointer"
+                className="p-1 rounded-xl bg-slate-800 text-slate-400 hover:text-white cursor-pointer"
               >
                 <ChevronDown className="w-5 h-5" />
               </button>
@@ -438,16 +533,65 @@ export function GameView({
           </div>
 
           <div className="flex-1 overflow-y-auto py-3 space-y-2 text-xs">
-            {room.events.length === 0 ? (
-              <div className="text-center text-slate-500 py-8">Brak wpisów w dzienniku</div>
+            {drawerTab === 'EVENTS' ? (
+              room.events && room.events.length > 0 ? (
+                room.events.map((ev) => (
+                  <div key={ev.id} className="p-2.5 rounded-xl bg-slate-900/80 border border-white/5 space-y-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        {renderEventBadge(ev.text)}
+                        <span className="font-mono text-[10px] text-slate-500">{ev.time}</span>
+                      </div>
+                    </div>
+                    <div className="text-slate-200 text-xs leading-snug">{ev.text}</div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center text-slate-500 py-10">Brak nowych wydarzeń.</div>
+              )
             ) : (
-              room.events.slice().reverse().map((ev) => (
-                <div key={ev.id} className="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800 flex items-start gap-2">
-                  <span className="font-mono text-slate-500 text-[10px] shrink-0 mt-0.5">{ev.time}</span>
-                  {renderEventBadge(ev.text)}
-                  <span className="text-slate-200 flex-1 leading-snug">{ev.text.replace(/^\[[^\]]+\]\s*/, '')}</span>
-                </div>
-              ))
+              <div className="space-y-2">
+                {room.players.map((p) => {
+                  const isHiderP = p.role === 'HIDER';
+                  return (
+                    <div
+                      key={p.id}
+                      className={`p-2.5 rounded-xl border flex items-center justify-between gap-2 ${
+                        p.isCaught
+                          ? 'bg-slate-950/40 border-slate-800 opacity-60'
+                          : isHiderP
+                          ? 'bg-purple-950/20 border-purple-900/40'
+                          : 'bg-cyan-950/20 border-cyan-900/40'
+                      }`}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <strong className={`text-xs ${p.isCaught ? 'line-through text-slate-400' : 'text-white'}`}>
+                            {p.name}
+                          </strong>
+                          {p.id === myPlayer?.id && (
+                            <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[9px] font-bold">TY</span>
+                          )}
+                          <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold uppercase ${
+                            p.isCaught
+                              ? 'bg-rose-900/40 text-rose-300'
+                              : isHiderP ? 'bg-purple-500/20 text-purple-300' : 'bg-cyan-500/20 text-cyan-300'
+                          }`}>
+                            {p.isCaught ? 'Złapany' : isHiderP ? 'Ucieka' : 'Szuka'}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 mt-1 text-[11px] text-slate-300">
+                          <span>{p.carModel || 'Auto'}</span>
+                          {p.carColor && (
+                            <span className="w-2.5 h-2.5 rounded-full border border-white/40" style={{ backgroundColor: getColorHex(p.carColor) }} />
+                          )}
+                          {p.carPlate && <LicensePlate plate={p.carPlate} size="xs" />}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </div>
         </div>
@@ -505,7 +649,7 @@ export function GameView({
 
       {showCaptainModal && (
         <div className="fixed inset-0 z-[2800] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 select-none">
-          <div className="w-full max-w-sm glass-panel border border-rose-500/30 rounded-3xl p-5 space-y-4 shadow-2xl relative overflow-hidden">
+          <div className="w-full max-w-sm glass-panel border border-rose-500/30 rounded-3xl p-5 space-y-4 shadow-2xl relative overflow-hidden animate-fade-in">
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <div className="flex items-center gap-2">
                 <div className="p-2 rounded-xl bg-rose-500/20 text-rose-400 border border-rose-500/30">
