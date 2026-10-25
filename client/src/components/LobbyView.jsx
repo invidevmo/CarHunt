@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   ShieldAlert, 
   Shield,
@@ -22,10 +22,14 @@ import {
   Crosshair,
   MapPin,
   QrCode,
-  Gauge
+  Gauge,
+  MessageSquare,
+  History
 } from 'lucide-react';
 import { LicensePlate } from './LicensePlate';
 import { ZoneConfigModal } from './ZoneConfigModal';
+import { RoomChatModal } from './RoomChatModal';
+import { GameHistoryModal } from './GameHistoryModal';
 import { COLOR_PRESETS, getColorHex } from '../utils/carColors';
 
 const POPULAR_CAR_SUGGESTIONS = [
@@ -44,6 +48,7 @@ export function LobbyView({
   onSetZone,
   onStartGame,
   onLeaveRoom,
+  onSendMessage,
   myGpsPosition,
 }) {
   const [copied, setCopied] = useState(false);
@@ -56,6 +61,19 @@ export function LobbyView({
   const [showSettings, setShowSettings] = useState(false);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [showZoneModal, setShowZoneModal] = useState(false);
+  const [showChat, setShowChat] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
+
+  const prevMsgCountRef = useRef(room?.messages?.length || 0);
+
+  useEffect(() => {
+    const currentCount = room?.messages?.length || 0;
+    if (currentCount > prevMsgCountRef.current && !showChat) {
+      setUnreadChatCount((c) => c + (currentCount - prevMsgCountRef.current));
+    }
+    prevMsgCountRef.current = currentCount;
+  }, [room?.messages, showChat]);
 
   const [editName, setEditName] = useState('');
   const [editModel, setEditModel] = useState('');
@@ -352,7 +370,18 @@ export function LobbyView({
           )}
         </div>
 
-        <div className="grid grid-cols-2 gap-2 pt-2">
+        <div className="pt-1">
+          <button
+            type="button"
+            onClick={() => setShowHistory(true)}
+            className="w-full py-2.5 px-4 rounded-2xl bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white border border-white/10 text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer active:scale-95 shadow-md"
+          >
+            <History className="w-4 h-4 text-cyan-400" />
+            <span>Zobacz Historię i Statystyki Rozgrywek</span>
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 pt-1">
           <div className="glass-card rounded-2xl p-2.5 border-white/5 space-y-1">
             <div className="flex items-center gap-1.5 text-amber-400 text-xs font-black">
               <Radar className="w-3.5 h-3.5" />
@@ -393,6 +422,13 @@ export function LobbyView({
             </p>
           </div>
         </div>
+
+        {showHistory && (
+          <GameHistoryModal
+            history={[]}
+            onClose={() => setShowHistory(false)}
+          />
+        )}
       </div>
     );
   }
@@ -444,6 +480,35 @@ export function LobbyView({
             Załogi: <strong className="text-white">{room.players.length}</strong> ({hiders.length} ucieka vs {seekers.length} szuka)
           </div>
         </div>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => {
+            setShowChat(true);
+            setUnreadChatCount(0);
+          }}
+          className="flex-1 py-2.5 px-3 rounded-2xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-white/10 text-xs font-bold flex items-center justify-center gap-2 transition cursor-pointer active:scale-95 shadow-md relative"
+        >
+          <MessageSquare className="w-4 h-4 text-amber-400" />
+          <span>Czat Pokoju</span>
+          {unreadChatCount > 0 && (
+            <span className="px-1.5 py-0.2 rounded-full bg-rose-500 text-white text-[9px] font-black animate-pulse">
+              +{unreadChatCount}
+            </span>
+          )}
+          {room.messages?.length > 0 && unreadChatCount === 0 && (
+            <span className="text-[10px] text-slate-500 font-mono">({room.messages.length})</span>
+          )}
+        </button>
+
+        <button
+          onClick={() => setShowHistory(true)}
+          className="py-2.5 px-3.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white border border-white/10 text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer active:scale-95 shadow-md"
+        >
+          <History className="w-4 h-4 text-cyan-400" />
+          <span>Historia Gier</span>
+        </button>
       </div>
 
       <div className="glass-card rounded-2xl p-3 flex items-center justify-between border-amber-500/20 bg-slate-900/60">
@@ -507,11 +572,23 @@ export function LobbyView({
 
               {room.settings.gameMode === 'MOVING_ZONE' ? (
                 <span className="text-[10px] text-slate-400 block mt-0.5">
-                  Teren główny: <strong className="text-cyan-400 font-mono">{(room.settings.movingZone.outerRadius / 1000).toFixed(1)} km</strong> | Strefa aut: <strong className="text-rose-400 font-mono">{(room.settings.movingZone.activeRadius / 1000).toFixed(1)} km</strong> | Zmiana co <strong className="text-white font-mono">{(room.settings.movingZone.shiftInterval / 60).toFixed(0)} min</strong>
+                  Teren główny: <strong className="text-cyan-400 font-mono">
+                    {room.settings.movingZone.outerRadius >= 1000 
+                      ? `${(room.settings.movingZone.outerRadius / 1000).toFixed(1)} km` 
+                      : `${room.settings.movingZone.outerRadius} m`}
+                  </strong> | Strefa aut: <strong className="text-rose-400 font-mono">
+                    {room.settings.movingZone.activeRadius >= 1000 
+                      ? `${(room.settings.movingZone.activeRadius / 1000).toFixed(1)} km` 
+                      : `${room.settings.movingZone.activeRadius} m`}
+                  </strong> | Zmiana co <strong className="text-white font-mono">{(room.settings.movingZone.shiftInterval / 60).toFixed(0)} min</strong>
                 </span>
               ) : (
                 <span className="text-[10px] text-slate-400 block mt-0.5">
-                  Promień: <strong className="text-rose-400 font-mono font-bold">{(room.settings.zone.radius / 1000).toFixed(1)} km</strong> | Karencja: <strong className="text-white font-mono">{room.settings.zone.graceSeconds || 30}s</strong>
+                  Promień: <strong className="text-rose-400 font-mono font-bold">
+                    {room.settings.zone.radius >= 1000 
+                      ? `${(room.settings.zone.radius / 1000).toFixed(1)} km` 
+                      : `${room.settings.zone.radius} m`}
+                  </strong> | Karencja: <strong className="text-white font-mono">{room.settings.zone.graceSeconds || 30}s</strong>
                 </span>
               )}
             </div>
@@ -840,6 +917,8 @@ export function LobbyView({
                     onChange={(e) => onUpdateSettings({ pingFuzzRadius: Number(e.target.value) })}
                     className="w-full bg-slate-950 border border-slate-700/80 rounded-xl p-2.5 text-white"
                   >
+                    <option value={50}>50 metrów (Mikrostrefa)</option>
+                    <option value={75}>75 metrów</option>
                     <option value={100}>100 metrów</option>
                     <option value={150}>150 metrów</option>
                     <option value={200}>200 metrów</option>
@@ -960,6 +1039,26 @@ export function LobbyView({
             </form>
           </div>
         </div>
+      )}
+
+      {showChat && (
+        <RoomChatModal
+          roomCode={room.code}
+          myPlayer={myPlayer}
+          messages={room.messages || []}
+          onSendMessage={onSendMessage}
+          onClose={() => {
+            setShowChat(false);
+            setUnreadChatCount(0);
+          }}
+        />
+      )}
+
+      {showHistory && (
+        <GameHistoryModal
+          history={room.history || []}
+          onClose={() => setShowHistory(false)}
+        />
       )}
     </div>
   );

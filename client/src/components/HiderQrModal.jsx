@@ -4,16 +4,16 @@ import { QrCode, X, Car, Sun, Moon } from 'lucide-react';
 import { LicensePlate } from './LicensePlate';
 import { getColorHex } from '../utils/carColors';
 
-export function HiderQrModal({ myPlayer, roomCode, onClose }) {
+export function HiderQrModal({ myPlayer, onClose }) {
   const [highBrightness, setHighBrightness] = useState(true);
 
   if (!myPlayer) return null;
 
-  const qrData = myPlayer.catchToken || `CARHUNT:${roomCode}:${myPlayer.id}:${myPlayer.catchCode || '0000'}`;
-  const pinCode = myPlayer.catchCode || '----';
+  const pinCode = myPlayer.catchCode || '0000';
+  const qrData = `CARHUNT:${pinCode}`;
 
   return (
-    <div className="fixed inset-0 z-[2500] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-3 sm:p-4 select-none">
+    <div className="fixed inset-0 z-[2500] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-3 sm:p-4 select-none pb-safe pt-safe">
       <div 
         className={`max-w-sm w-full max-h-[94dvh] overflow-y-auto rounded-3xl p-4 sm:p-6 text-center space-y-3 sm:space-y-4 shadow-2xl relative transition-all ${
           highBrightness ? 'bg-white text-slate-950 shadow-white/20' : 'glass-panel text-white border-white/10'
@@ -58,17 +58,17 @@ export function HiderQrModal({ myPlayer, roomCode, onClose }) {
           </div>
         </div>
 
-        <div className="p-2 sm:p-3 bg-white rounded-2xl shadow-xl border-2 border-slate-200 inline-block">
+        <div className="p-3 bg-white rounded-3xl shadow-xl border-4 border-slate-900 inline-block">
           <QRCodeSVG
             value={qrData}
-            size={180}
-            level="H"
+            size={210}
+            level="M"
             includeMargin={true}
           />
         </div>
 
         <div className={`p-3 rounded-2xl border ${highBrightness ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/80 border-slate-800'}`}>
-          <span className="text-[9px] uppercase font-bold tracking-widest opacity-60 block">
+          <span className="text-[10px] uppercase font-bold tracking-widest opacity-70 block">
             Awaryjny PIN (jeśli szyba jest przyciemniona):
           </span>
           <span className="text-3xl font-black font-mono tracking-widest text-amber-500">
@@ -77,7 +77,7 @@ export function HiderQrModal({ myPlayer, roomCode, onClose }) {
         </div>
 
         <p className="text-[11px] opacity-75 leading-tight px-2">
-          Umieść telefon za szybą lub na desce rozdzielczej. Gdy łowca Cię znajdzie, musi zeskanować ten kod aparatem w aplikacji!
+          Umieść telefon za szybą lub na desce rozdzielczej. Gdy łowca Cię znajdzie, skanuje ten kod aparatem w aplikacji.
         </p>
 
         <button

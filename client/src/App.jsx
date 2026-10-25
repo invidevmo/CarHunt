@@ -45,18 +45,63 @@ export default function App() {
       if (state && state.code) {
         saveCurrentRoom(state.code);
       }
+      if (state && state.history && state.history.length > 0) {
+        try {
+          const raw = localStorage.getItem('carhunt_match_history');
+          const local = raw ? JSON.parse(raw) : [];
+          const map = new Map();
+          state.history.forEach((m) => map.set(m.id, m));
+          local.forEach((m) => { if (!map.has(m.id)) map.set(m.id, m); });
+          const combined = Array.from(map.values())
+            .sort((a, b) => (b.finishedAt || 0) - (a.finishedAt || 0))
+            .slice(0, 30);
+          localStorage.setItem('carhunt_match_history', JSON.stringify(combined));
+        } catch {}
+      }
+    });
+
+    socket.on('new_chat_message', (msg) => {
+      sounds.playChatMessage();
+      setRoom((prev) => {
+        if (!prev) return prev;
+        const messages = prev.messages ? [...prev.messages, msg] : [msg];
+        return { ...prev, messages };
+      });
+    });
+
+    socket.on('game_over', ({ matchRecord }) => {
+      sounds.playVictory();
+      if (matchRecord) {
+        try {
+          const raw = localStorage.getItem('carhunt_match_history');
+          const current = raw ? JSON.parse(raw) : [];
+          const updated = [matchRecord, ...current.filter((m) => m.id !== matchRecord.id)].slice(0, 30);
+          localStorage.setItem('carhunt_match_history', JSON.stringify(updated));
+        } catch {}
+      }
     });
 
     socket.on('radar_ping', () => {
       sounds.playRadarPing();
     });
 
-    socket.on('alert', () => {
-      sounds.playAlert();
+    socket.on('alert', (alertData) => {
+      const type = alertData?.type || alertData;
+      if (type === 'HUNT_STARTED') {
+        sounds.playGameStart();
+      } else if (type === 'ZONE_PENALTY_TRIGGERED' || type === 'ZONE_BREACH') {
+        sounds.playZoneBuzzer();
+      } else if (type === 'HIDER_CAUGHT') {
+        sounds.playSiren();
+      } else {
+        sounds.playAlert();
+      }
     });
 
     return () => {
       socket.off('room_state');
+      socket.off('new_chat_message');
+      socket.off('game_over');
       socket.off('radar_ping');
       socket.off('alert');
     };
@@ -152,9 +197,19 @@ export default function App() {
     socket.emit('scan_catch_code', { roomCode: room.code, code }, callback);
   };
 
+  const handleSendMessage = (text) => {
+    if (!room) return;
+    socket.emit('send_chat', { roomCode: room.code, text });
+  };
+
   const handleResetToLobby = () => {
     if (!room) return;
     socket.emit('reset_to_lobby', { roomCode: room.code });
+  };
+
+  const handleEndGame = () => {
+    if (!room) return;
+    socket.emit('end_game', { roomCode: room.code });
   };
 
   const handleMapClick = (coords) => {
@@ -265,6 +320,7 @@ export default function App() {
             onSetZone={handleSetZone}
             onStartGame={handleStartGame}
             onLeaveRoom={handleLeaveRoom}
+            onSendMessage={handleSendMessage}
             myGpsPosition={position}
           />
         </main>
@@ -285,6 +341,8 @@ export default function App() {
         onMapClick={handleMapClick}
         onAttemptCatch={handleAttemptCatch}
         onScanCatchCode={handleScanCatchCode}
+        onSendMessage={handleSendMessage}
+        onEndGame={handleEndGame}
         onResetToLobby={handleResetToLobby}
         autoCenter={autoCenter}
         setAutoCenter={setAutoCenter}

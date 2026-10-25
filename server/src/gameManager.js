@@ -54,17 +54,17 @@ export class GameManager {
         hideDuration: 180,
         gameDuration: 900,
         pingInterval: 90,
-        pingFuzzRadius: 200,
+        pingFuzzRadius: 100,
         catchDistance: 50,
         zone: {
           center: { lat: 52.2297, lng: 21.0122 },
-          radius: 2500,
+          radius: 1000,
           graceSeconds: 30,
         },
         movingZone: {
           outerCenter: { lat: 52.2297, lng: 21.0122 },
-          outerRadius: 6000,
-          activeRadius: 1800,
+          outerRadius: 2500,
+          activeRadius: 500,
           shiftInterval: 240,
           transitionDuration: 60,
         },
@@ -78,6 +78,8 @@ export class GameManager {
       nextZone: null,
       winner: null,
       events: [],
+      messages: [],
+      history: [],
     };
 
     room.players.set(hostSocketId, {
@@ -380,30 +382,37 @@ export class GameManager {
       if (movingZone) {
         room.settings.movingZone = {
           ...room.settings.movingZone,
-          ...movingZone,
+          outerCenter: movingZone.outerCenter || room.settings.movingZone.outerCenter,
+          outerRadius: Math.max(300, Math.round(movingZone.outerRadius || 2500)),
+          activeRadius: Math.max(50, Math.round(movingZone.activeRadius || 500)),
+          shiftInterval: Math.max(60, Math.round(movingZone.shiftInterval || 180)),
+          transitionDuration: Math.max(15, Math.round(movingZone.transitionDuration || 45)),
         };
         room.settings.zone.center = { ...room.settings.movingZone.outerCenter };
-        room.settings.zone.radius = room.settings.movingZone.activeRadius || 1800;
+        room.settings.zone.radius = room.settings.movingZone.activeRadius;
       }
       if (typeof graceSeconds === 'number') {
         room.settings.zone.graceSeconds = graceSeconds;
       }
+      const outerStr = room.settings.movingZone.outerRadius >= 1000 ? `${(room.settings.movingZone.outerRadius / 1000).toFixed(1)} km` : `${room.settings.movingZone.outerRadius}m`;
+      const activeStr = room.settings.movingZone.activeRadius >= 1000 ? `${(room.settings.movingZone.activeRadius / 1000).toFixed(1)} km` : `${room.settings.movingZone.activeRadius}m`;
       this.logEvent(
         room,
-        `[TRYB DYNAMICZNY] Włączono przemieszczającą się strefę! Obszar główny: ${(room.settings.movingZone.outerRadius / 1000).toFixed(1)} km, Strefa aut: ${(room.settings.movingZone.activeRadius / 1000).toFixed(1)} km, Zmiana co ${(room.settings.movingZone.shiftInterval / 60).toFixed(0)} min.`
+        `[TRYB DYNAMICZNY] Włączono przemieszczającą się strefę! Obszar główny: ${outerStr}, Strefa aut: ${activeStr}, Zmiana co ${(room.settings.movingZone.shiftInterval / 60).toFixed(0)} min.`
       );
     } else {
       room.settings.gameMode = 'STATIC';
       if (center && typeof center.lat === 'number' && typeof center.lng === 'number') {
         room.settings.zone.center = { lat: center.lat, lng: center.lng };
       }
-      if (typeof radius === 'number' && radius >= 300) {
-        room.settings.zone.radius = radius;
+      if (typeof radius === 'number' && radius >= 50) {
+        room.settings.zone.radius = Math.round(radius);
       }
       if (typeof graceSeconds === 'number' && graceSeconds >= 5) {
         room.settings.zone.graceSeconds = graceSeconds;
       }
-      this.logEvent(room, `[TRYB STAŁY] Zaktualizowano strefę: promień ${(room.settings.zone.radius / 1000).toFixed(1)} km, czas powrotu ${room.settings.zone.graceSeconds || 30}s.`);
+      const radStr = room.settings.zone.radius >= 1000 ? `${(room.settings.zone.radius / 1000).toFixed(1)} km` : `${room.settings.zone.radius}m`;
+      this.logEvent(room, `[TRYB STAŁY] Zaktualizowano strefę: promień ${radStr}, czas powrotu ${room.settings.zone.graceSeconds || 30}s.`);
     }
 
     this.broadcastState(roomCode);
@@ -566,7 +575,7 @@ export class GameManager {
               });
             }
           } else if (timeElapsed > 0 && timeElapsed % shiftInterval === 0) {
-            const maxOffset = Math.max(250, (mz.outerRadius || 6000) - (mz.activeRadius || 1800));
+            const maxOffset = Math.max(30, (mz.outerRadius || 2500) - (mz.activeRadius || 500));
             const angle = Math.random() * 2 * Math.PI;
             const dist = Math.sqrt(Math.random()) * maxOffset;
             const deltaLat = (dist * Math.cos(angle)) / 111320;
@@ -662,10 +671,14 @@ export class GameManager {
       return { error: 'Wszyscy uciekinierzy zostali już schwytani!' };
     }
 
-    const cleanInput = (rawCode || '').trim();
+    const cleanInput = (rawCode || '').trim().toUpperCase();
 
     const targetHider = uncaughtHiders.find(
-      (h) => h.catchToken === cleanInput || h.catchCode === cleanInput
+      (h) =>
+        h.catchCode === cleanInput ||
+        `CARHUNT:${h.catchCode}` === cleanInput ||
+        h.catchToken === cleanInput ||
+        cleanInput.includes(h.catchCode)
     );
 
     if (!targetHider) {
@@ -779,18 +792,98 @@ export class GameManager {
     if (room.timer) clearInterval(room.timer);
     room.state = 'FINISHED';
     room.winner = winner;
-    this.logEvent(room, reason);
+    this.logEvent(room, reason, 'GAME');
+
+    const allHiders = Array.from(room.players.values()).filter((p) => p.role === 'HIDER');
+    const allSeekers = Array.from(room.players.values()).filter((p) => p.role === 'SEEKER');
+    const surviving = allHiders.filter((h) => !h.isCaught);
+    const caught = allHiders.filter((h) => h.isCaught);
+
+    const matchRecord = {
+      id: 'm_' + Date.now(),
+      finishedAt: Date.now(),
+      dateStr: new Date().toLocaleDateString('pl-PL') + ' ' + new Date().toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' }),
+      winner,
+      reason,
+      gameMode: room.settings.gameMode,
+      durationSeconds: Math.max(1, (room.phaseTimeTotal || 900) - (room.timeRemaining || 0)),
+      survivors: surviving.map((h) => ({ name: h.name, carModel: h.carModel, carColor: h.carColor, carPlate: h.carPlate })),
+      caught: caught.map((h) => ({ name: h.name, carModel: h.carModel, carColor: h.carColor, carPlate: h.carPlate, caughtBy: h.caughtBy })),
+      seekers: allSeekers.map((s) => ({ name: s.name, carModel: s.carModel, carPlate: s.carPlate })),
+    };
+
+    if (!room.history) room.history = [];
+    room.history.unshift(matchRecord);
+    if (room.history.length > 25) room.history.pop();
 
     this.io.to(room.code).emit('game_over', {
       winner,
       reason,
+      matchRecord,
     });
     this.broadcastState(room.code);
   }
 
+  addChatMessage(roomCode, socketId, text) {
+    const room = this.rooms.get(roomCode);
+    if (!room) return { error: 'Pokój nie istnieje!' };
+    const player = room.players.get(socketId);
+    if (!player) return { error: 'Nie należysz do tego pokoju!' };
+
+    const cleanText = (text || '').trim().slice(0, 200);
+    if (!cleanText) return { error: 'Pusta treść wiadomości!' };
+
+    const msg = {
+      id: 'msg_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+      senderId: socketId,
+      senderName: player.name,
+      senderRole: player.role,
+      carModel: player.carModel,
+      carColor: player.carColor,
+      carPlate: player.carPlate,
+      text: cleanText,
+      time: new Date().toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' }),
+      timestamp: Date.now(),
+    };
+
+    if (!room.messages) room.messages = [];
+    room.messages.push(msg);
+    if (room.messages.length > 60) room.messages.shift();
+
+    this.logEvent(room, `[CZAT] ${player.name}: "${cleanText}"`, 'CHAT');
+    this.io.to(roomCode).emit('new_chat_message', msg);
+    return { success: true, message: msg };
+  }
+
+  forceEndGame(roomCode, hostSocketId) {
+    const room = this.rooms.get(roomCode);
+    if (!room) return { error: 'Pokój nie istnieje!' };
+    const player = room.players.get(hostSocketId);
+    if (!player || !player.isHost) {
+      return { error: 'Tylko Kapitan (Host) może przedwcześnie zakończyć rozgrywkę!' };
+    }
+    if (room.state !== 'HIDING' && room.state !== 'HUNTING') {
+      return { error: 'Rozgrywka nie jest w toku!' };
+    }
+
+    const allHiders = Array.from(room.players.values()).filter((p) => p.role === 'HIDER');
+    const uncaughtHiders = allHiders.filter((h) => !h.isCaught);
+    const winner = uncaughtHiders.length > 0 ? 'SURVIVORS' : 'SEEKERS';
+    const reason = `[ZAKOŃCZENIE PRZEZ KAPITANA] Kapitan ${player.name} zakończył rundę na żądanie! ${
+      uncaughtHiders.length > 0
+        ? `Uciekinierzy (${uncaughtHiders.length} ocalałych) wygrywają!`
+        : `Wszystkie auta zostały schwytane – Łowcy wygrywają!`
+    }`;
+
+    this.finishGame(room, winner, reason);
+    return { success: true };
+  }
+
   resetToLobby(roomCode, hostSocketId) {
     const room = this.rooms.get(roomCode);
-    if (!room || room.hostId !== hostSocketId) return;
+    if (!room) return;
+    const player = room.players.get(hostSocketId);
+    if (!player || !player.isHost) return;
 
     if (room.timer) clearInterval(room.timer);
     room.state = 'LOBBY';
@@ -808,17 +901,18 @@ export class GameManager {
       p.catchCode = generateCatchCode();
       p.catchToken = `CARHUNT:${roomCode}:${p.id}:${p.catchCode}`;
     }
-    this.logEvent(room, `Gra zresetowana. Powrót do poczekalni (wygenerowano nowe kody QR).`);
+    this.logEvent(room, `Gra zresetowana. Powrót do poczekalni (nowe kody QR).`, 'RESET');
     this.broadcastState(roomCode);
   }
 
-  logEvent(room, text) {
+  logEvent(room, text, type = 'INFO') {
     room.events.push({
-      id: Date.now() + Math.random().toString(),
+      id: Date.now() + Math.random().toString(36).substring(2, 6),
       time: new Date().toLocaleTimeString('pl-PL'),
       text,
+      type,
     });
-    if (room.events.length > 30) room.events.shift();
+    if (room.events.length > 40) room.events.shift();
   }
 
   getPublicRoomState(room, recipientSocketId) {
@@ -889,6 +983,8 @@ export class GameManager {
         caught: caughtHidersCount,
       },
       events: room.events,
+      messages: room.messages || [],
+      history: room.history || [],
       players: playersList,
       myPlayer: recipient ? {
         id: recipient.id,

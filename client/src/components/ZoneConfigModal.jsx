@@ -37,21 +37,39 @@ function ZoneMapEvents({ onCenterSelect }) {
   return null;
 }
 
-function ZoneMapRecenter({ center }) {
+function ZoneMapRecenter({ center, radius }) {
   const map = useMap();
   useEffect(() => {
     if (center && typeof center.lat === 'number') {
-      map.setView([center.lat, center.lng], map.getZoom() || 13, { animate: true });
+      let zoom = 14;
+      if (radius) {
+        if (radius <= 200) zoom = 17;
+        else if (radius <= 450) zoom = 16;
+        else if (radius <= 900) zoom = 15;
+        else if (radius <= 2200) zoom = 14;
+        else if (radius <= 5000) zoom = 13;
+        else zoom = 12;
+      }
+      map.setView([center.lat, center.lng], zoom, { animate: true });
     }
-  }, [center, map]);
+  }, [center, radius, map]);
   return null;
 }
 
 const STATIC_PRESETS = [
-  { label: '1.0 km', radius: 1000, desc: 'Dzielnica' },
-  { label: '2.5 km', radius: 2500, desc: 'Średnie miasto' },
-  { label: '5.0 km', radius: 5000, desc: 'Duże miasto' },
-  { label: '10.0 km', radius: 10000, desc: 'Powiat' },
+  { label: '150 m', radius: 150, desc: 'Parking / Plac' },
+  { label: '300 m', radius: 300, desc: 'Osiedle' },
+  { label: '500 m', radius: 500, desc: 'Kwartał ulic' },
+  { label: '1.0 km', radius: 1000, desc: 'Mała dzielnica' },
+  { label: '2.0 km', radius: 2000, desc: 'Średnia strefa' },
+  { label: '4.0 km', radius: 4000, desc: 'Duże miasto' },
+];
+
+const MOVING_PRESETS = [
+  { label: 'Mikro', outerRadius: 800, activeRadius: 200, desc: 'Teren 800m / Strefa 200m' },
+  { label: 'Kompaktowa', outerRadius: 1800, activeRadius: 400, desc: 'Teren 1.8km / Strefa 400m' },
+  { label: 'Zbalansowana', outerRadius: 3500, activeRadius: 800, desc: 'Teren 3.5km / Strefa 800m' },
+  { label: 'Duża', outerRadius: 6000, activeRadius: 1500, desc: 'Teren 6km / Strefa 1.5km' },
 ];
 
 export function ZoneConfigModal({
@@ -160,6 +178,8 @@ export function ZoneConfigModal({
           <MapContainer
             center={[center.lat, center.lng]}
             zoom={gameMode === 'MOVING_ZONE' ? 12 : 13}
+            zoomControl={false}
+            attributionControl={false}
             scrollWheelZoom={true}
             className="w-full h-full"
           >
@@ -171,7 +191,7 @@ export function ZoneConfigModal({
               attribution='&copy; OpenStreetMap contributors'
             />
             <ZoneMapEvents onCenterSelect={setCenter} />
-            <ZoneMapRecenter center={center} />
+            <ZoneMapRecenter center={center} radius={gameMode === 'STATIC' ? staticRadius : outerRadius} />
 
             {gameMode === 'STATIC' && (
               <Circle
@@ -242,12 +262,28 @@ export function ZoneConfigModal({
                   <span className="font-extrabold text-slate-300 uppercase tracking-wider text-[11px]">
                     Promień Strefy Gry:
                   </span>
-                  <strong className="text-amber-400 font-mono text-sm font-black">
-                    {(staticRadius / 1000).toFixed(1)} km ({staticRadius}m)
-                  </strong>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setStaticRadius((r) => Math.max(75, r - 50))}
+                      className="px-2 py-0.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono text-xs font-bold border border-white/10"
+                    >
+                      -50m
+                    </button>
+                    <strong className="text-amber-400 font-mono text-sm font-black px-1">
+                      {staticRadius >= 1000 ? `${(staticRadius / 1000).toFixed(1)} km (${staticRadius}m)` : `${staticRadius} m`}
+                    </strong>
+                    <button
+                      type="button"
+                      onClick={() => setStaticRadius((r) => Math.min(10000, r + 50))}
+                      className="px-2 py-0.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono text-xs font-bold border border-white/10"
+                    >
+                      +50m
+                    </button>
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                <div className="grid grid-cols-3 gap-1.5">
                   {STATIC_PRESETS.map((preset) => {
                     const isSelected = staticRadius === preset.radius;
                     return (
@@ -270,19 +306,52 @@ export function ZoneConfigModal({
 
                 <input
                   type="range"
-                  min="500"
-                  max="15000"
-                  step="250"
+                  min="75"
+                  max="8000"
+                  step="25"
                   value={staticRadius}
                   onChange={(e) => setStaticRadius(Number(e.target.value))}
                   className="w-full accent-rose-500 mt-2.5"
                 />
+                <div className="flex justify-between text-[9px] font-mono text-slate-500 px-1 mt-0.5">
+                  <span>75 m (Mikro)</span>
+                  <span>500 m</span>
+                  <span>1.5 km</span>
+                  <span>8 km</span>
+                </div>
               </div>
             </div>
           )}
 
           {gameMode === 'MOVING_ZONE' && (
             <div className="space-y-3.5">
+              <div className="space-y-1.5">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">Szybkie zestawy stref dynamicznych:</span>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                  {MOVING_PRESETS.map((p) => {
+                    const isSelected = outerRadius === p.outerRadius && activeRadius === p.activeRadius;
+                    return (
+                      <button
+                        key={p.label}
+                        type="button"
+                        onClick={() => {
+                          setOuterRadius(p.outerRadius);
+                          setActiveRadius(p.activeRadius);
+                        }}
+                        className={`p-2 rounded-xl border text-center transition cursor-pointer active:scale-95 ${
+                          isSelected
+                            ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300 shadow-sm'
+                            : 'bg-slate-950/70 border-slate-800 text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        <strong className="block text-[11px] font-black">{p.label}</strong>
+                        <span className="text-[8px] opacity-75">{p.desc}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               <div className="glass-card p-3 rounded-2xl border-cyan-500/20 bg-cyan-950/20 space-y-1.5">
                 <div className="flex justify-between items-center">
                   <span className="font-black text-cyan-300 uppercase text-[11px] flex items-center gap-1">
@@ -290,7 +359,7 @@ export function ZoneConfigModal({
                     1. Główny Teren Operacyjny (Duży Okrąg):
                   </span>
                   <strong className="text-cyan-400 font-mono font-bold text-sm">
-                    {(outerRadius / 1000).toFixed(1)} km
+                    {outerRadius >= 1000 ? `${(outerRadius / 1000).toFixed(1)} km (${outerRadius}m)` : `${outerRadius} m`}
                   </strong>
                 </div>
                 <p className="text-[10px] text-slate-400">
@@ -298,17 +367,23 @@ export function ZoneConfigModal({
                 </p>
                 <input
                   type="range"
-                  min="3000"
-                  max="15000"
-                  step="500"
+                  min="400"
+                  max="10000"
+                  step="50"
                   value={outerRadius}
                   onChange={(e) => {
                     const val = Number(e.target.value);
                     setOuterRadius(val);
-                    if (activeRadius > val * 0.6) setActiveRadius(Math.round(val * 0.4));
+                    if (activeRadius > val * 0.7) setActiveRadius(Math.round(val * 0.35));
                   }}
                   className="w-full accent-cyan-400"
                 />
+                <div className="flex justify-between text-[9px] font-mono text-slate-500 px-1">
+                  <span>400 m</span>
+                  <span>2 km</span>
+                  <span>5 km</span>
+                  <span>10 km</span>
+                </div>
               </div>
 
               <div className="glass-card p-3 rounded-2xl border-rose-500/20 bg-rose-950/20 space-y-1.5">
@@ -318,7 +393,7 @@ export function ZoneConfigModal({
                     2. Aktywna Strefa Aut (Mniejszy Okrąg):
                   </span>
                   <strong className="text-rose-400 font-mono font-bold text-sm">
-                    {(activeRadius / 1000).toFixed(1)} km
+                    {activeRadius >= 1000 ? `${(activeRadius / 1000).toFixed(1)} km (${activeRadius}m)` : `${activeRadius} m`}
                   </strong>
                 </div>
                 <p className="text-[10px] text-slate-400">
@@ -326,13 +401,19 @@ export function ZoneConfigModal({
                 </p>
                 <input
                   type="range"
-                  min="800"
-                  max={Math.max(1000, outerRadius - 1000)}
-                  step="200"
+                  min="75"
+                  max={Math.max(100, outerRadius - 100)}
+                  step="25"
                   value={activeRadius}
                   onChange={(e) => setActiveRadius(Number(e.target.value))}
                   className="w-full accent-rose-500"
                 />
+                <div className="flex justify-between text-[9px] font-mono text-slate-500 px-1">
+                  <span>75 m (Mikro)</span>
+                  <span>250 m</span>
+                  <span>500 m</span>
+                  <span>{(outerRadius - 100) >= 1000 ? `${((outerRadius - 100)/1000).toFixed(1)} km` : `${outerRadius - 100}m`}</span>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-2 text-xs">

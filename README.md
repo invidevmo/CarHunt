@@ -31,16 +31,26 @@
 ## 🌟 Główne Funkcje Platformy
 
 ### 1. 🎯 Dynamiczne Tryby Gry (Strefa Rozgrywki & Battle Royale)
-* **Tryb Stały (Static Zone):** Kapitan pokoju wyznacza na mapie promień operacyjny (od 1.0 km do 10 km). Opuszczenie strefy przez auto uruchamia odliczanie karencji (15s–60s) – brak powrotu na czas skutkuje natychmiastowym ujawnieniem dokładnej lokalizacji pojazdu wszystkim łowcom!
-* **Tryb Dynamiczny / Battle Royale (Moving Zone):** Podwójna strefa! Duży okrąg określa granice terenu (np. 6 km), a mniejszy okrąg (np. 1.8 km) stanowi aktywny obszar dla samochodów. Co określony czas (np. co 3 lub 4 minuty) strefa losowo przemieszcza się, dając załogom czas na przejazd. Samochody, które nie zdążą wjechać do nowej strefy, zostają zdemaskowane!
+* **Tryb Stały (Static Zone):** Kapitan pokoju wyznacza na mapie promień operacyjny (od 75 m / 150 m dla parkingów i osiedli aż do 8 km dla całych miast). Opuszczenie strefy przez auto uruchamia odliczanie karencji (15s–60s) – brak powrotu na czas skutkuje natychmiastowym ujawnieniem dokładnej lokalizacji pojazdu wszystkim łowcom!
+* **Tryb Dynamiczny / Battle Royale (Moving Zone):** Podwójna strefa! Duży okrąg określa granice terenu (od 400 m do 10 km), a mniejszy okrąg (od 75 m do 1.5 km) stanowi aktywny obszar dla samochodów. Co określony czas (np. co 2–5 minut) strefa losowo przemieszcza się po wyznaczonym rejonie! Samochody, które nie zdążą wjechać do nowej strefy, zostają zdemaskowane!
 
 ### 2. 📷 Niezawodny Skaner Kodów QR + Awaryjny PIN
 * Każde uciekające auto posiada unikalny, generowany kryptograficznie token QR oraz 4-cyfrowy awaryjny kod PIN.
 * Uciekinier kładzie telefon z kodem QR za przednią szybą lub na desce rozdzielczej.
-* Łowca po dojechaniu do auta skanuje kod wbudowanym aparatem lub wpisuje PIN w przypadku mocno przyciemnionych szyb.
-* Moduł skanera jest w 100% odporny na błędy renderowania przeglądarek mobilnych (iOS Safari / WebKit / Android Chrome).
+* **Akcelerowany sprzętowo skaner:** Wykorzystuje natywny silnik `BarcodeDetector` (GPU/NPU) wspierany hybrydowo przez bibliotekę `html5-qrcode` analizującą pełną klatkę wideo (bez restrykcyjnych ramek kadrowania).
+* Automatyczna detekcja w czasie rzeczywistym z odległości 2–5 metrów przez szybę samochodu + sygnał dźwiękowy potwierdzający trafienie.
 
-### 3. 🔄 Płynne Odzyskiwanie Sesji (Session Persistence)
+### 3. 💬 Czat Pokoju & Krótkofalówka (CB Radio)
+* Zintegrowany komunikator taktyczny na żywo działający w poczekalni oraz podczas pościgu.
+* Przyciski szybkiego radia 1-klik ("Mam dobrą kryjówkę!", "Ruszam w pościg!", "Zgłaszam pozycję!", "Uważajcie na drodze!") dedykowane dla pilotów załóg.
+* Licznik nieprzeczytanych wiadomości i dźwiękowe powiadomienia w czasie rzeczywistym.
+
+### 4. 🏆 Historia Rozgrywek i Statystyki Załóg
+* Rejestr minionych meczów przechowywany w pamięci lokalnej oraz synchronizowany z serwerem.
+* Dokładne statystyki wygranych (Łowcy vs Uciekinierzy), czas trwania rundy, lista ocalałych i schwytanych aut.
+* Dostępny bezpośrednio z ekranu głównego, lobby oraz podsumowania gry.
+
+### 5. 🔄 Płynne Odzyskiwanie Sesji (Session Persistence)
 * Przypadkowe odświeżenie strony na telefonie, chwilowy spadek zasięgu LTE lub przełączenie aplikacji nie wyrzuca gracza z pokoju!
 * Serwer utrzymuje 120-sekundowy bufor ochronny (grace period), a klient automatycznie przywraca rolę, stan pojazdu i pozycję po ponownym połączeniu.
 
@@ -65,6 +75,13 @@
   * **Tryb Ciemny (Tactical Cyber OSM)** – wysoki kontrast i czytelność w nocy dzięki filtrowi cyfrowemu.
   * **Tryb Satelitarny (Esri World Imagery)** – widok rzeczywistych parkingów, uliczek i zaułków.
   * **Tryb Dzienny (OpenStreetMap Standard)** – jasny motyw drogowy.
+
+### 8. 👑 Panel Dowodzenia Kapitana (Przedwczesne Zakończenie Rozgrywki)
+* Kapitan pokoju (Host) ma pełną kontrolę nad rundą w dowolnym momencie pościgu.
+* Dedykowany przycisk z flagą szachownicy w górnym pasku otwiera panel decyzyjny z opcjami:
+  * **Zakończ i Podsumuj Rundę:** Natychmiastowe rozstrzygnięcie meczu na podstawie ocalałych aut, odsłonięcie wszystkich kryjówek na mapie, wystrzał konfetti i zapis w historii.
+  * **Przerwij i Wróć do Poczekalni:** Błyskawiczny reset pokoju i powrót załóg do lobby.
+  * **Graj Dalej:** Zamknięcie okna bez przerywania jazdy.
 
 ---
 
@@ -152,6 +169,7 @@ carhunt-gps/
 ├── client/                     # Frontend aplikacji (Vite + React 19)
 │   ├── src/
 │   │   ├── components/
+│   │   │   ├── GameHistoryModal.jsx    # Archiwum gier, statystyki wygranych i czas trwania
 │   │   │   ├── GameOverModal.jsx       # Ekran triumfu, konfetti i odsłonięcia kryjówek
 │   │   │   ├── GameView.jsx            # Główny panel gry, radaru i telemetrii
 │   │   │   ├── HiderQrModal.jsx        # Karta QR uciekiniera do powieszenia za szybą
@@ -159,6 +177,7 @@ carhunt-gps/
 │   │   │   ├── LicensePlate.jsx        # Renderowanie polskich tablic rejestracyjnych
 │   │   │   ├── LobbyView.jsx           # Poczekalnia, garaż, dobór ról i parametry pokoju
 │   │   │   ├── MapComponent.jsx        # Interaktywna mapa Leaflet z warstwami i autami
+│   │   │   ├── RoomChatModal.jsx       # Czat taktyczny pokoju oraz szybkie radio CB
 │   │   │   ├── SeekerScannerModal.jsx  # Crash-proof skaner kodów QR i manualny PIN
 │   │   │   └── ZoneConfigModal.jsx     # Konfiguracja strefy stałej oraz dynamicznej
 │   │   ├── hooks/

@@ -241,7 +241,53 @@ export function MapComponent({
 
   return (
     <div className="relative w-full h-full min-h-0">
-      <div className="absolute top-20 sm:top-24 right-3 z-[1000] pointer-events-auto flex flex-col gap-2">
+      <div className="absolute top-20 sm:top-24 left-3 z-[900] pointer-events-auto flex flex-col gap-1.5 max-w-[280px]">
+        <div className="flex items-center gap-2">
+          <div className="glass-panel px-3 py-1.5 rounded-2xl shadow-2xl flex items-center gap-2 border-white/10 shrink-0">
+            <div className="p-1 rounded-lg bg-amber-500/20 text-amber-400">
+              <Gauge className="w-3.5 h-3.5" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[7px] font-black uppercase text-slate-400 tracking-wider leading-none">Prędkość</span>
+              <div className="flex items-baseline gap-0.5">
+                <span className="font-mono text-base font-black text-white leading-tight">{mySpeed || 0}</span>
+                <span className="text-[8px] font-bold text-slate-400">km/h</span>
+              </div>
+            </div>
+          </div>
+
+          {myPlayer && zone && (
+            <div className={`px-2.5 py-1.5 rounded-2xl glass-panel text-[10px] font-bold shadow-xl border flex items-center gap-1.5 shrink-0 ${
+              myPlayer.isOutOfZone
+                ? 'border-rose-500 text-rose-300 bg-rose-950/70 animate-pulse'
+                : 'border-emerald-500/40 text-emerald-300 bg-slate-950/80'
+            }`}>
+              <span className={`w-2 h-2 rounded-full ${myPlayer.isOutOfZone ? 'bg-rose-500 animate-ping' : 'bg-emerald-400'}`}></span>
+              <span className="whitespace-nowrap">
+                {myPlayer.isOutOfZone
+                  ? (myPlayer.zonePenaltyActive ? 'KARA STREFY!' : `POZA STREFĄ (${myPlayer.outOfZoneSecondsLeft || 0}s)`)
+                  : isMovingZoneMode ? 'W STREFIE DYNAMICZNEJ' : 'W STREFIE'}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {nextZone && (
+          <div className="glass-panel px-3 py-2 rounded-2xl shadow-2xl border-amber-400/50 bg-amber-950/85 pointer-events-auto flex items-center gap-2 text-white animate-pulse">
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping shrink-0" />
+            <div className="text-left leading-tight">
+              <span className="text-[9px] font-black uppercase text-amber-300 block tracking-wider">
+                Strefa Przemieszcza Się!
+              </span>
+              <span className="text-[11px] font-bold text-white">
+                Dotrzyj do żółtego okręgu: <strong className="font-mono text-amber-300">{nextZone.secondsLeft}s</strong>
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="absolute top-20 sm:top-24 right-3 z-[900] pointer-events-auto flex flex-col gap-2">
         <button
           onClick={cycleLayer}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl glass-panel text-white text-xs font-bold shadow-2xl transition hover:border-amber-500/50 active:scale-95 cursor-pointer"
@@ -268,53 +314,11 @@ export function MapComponent({
         )}
       </div>
 
-      <div className="absolute bottom-28 sm:bottom-32 left-3 z-[900] pointer-events-none flex flex-col gap-2 max-w-[280px]">
-        {nextZone && (
-          <div className="glass-panel px-3 py-2 rounded-2xl shadow-2xl border-amber-400/50 bg-amber-950/80 pointer-events-auto flex items-center gap-2 text-white animate-pulse">
-            <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping shrink-0" />
-            <div className="text-left leading-tight">
-              <span className="text-[9px] font-black uppercase text-amber-300 block tracking-wider">
-                Strefa Przemieszcza Się!
-              </span>
-              <span className="text-[11px] font-bold text-white">
-                Dotrzyj do żółtego okręgu: <strong className="font-mono text-amber-300">{nextZone.secondsLeft}s</strong>
-              </span>
-            </div>
-          </div>
-        )}
-
-        <div className="glass-panel px-3 py-1.5 rounded-2xl shadow-2xl flex items-center gap-2 border-white/10 pointer-events-auto self-start">
-          <div className="p-1 rounded-lg bg-amber-500/20 text-amber-400">
-            <Gauge className="w-3.5 h-3.5" />
-          </div>
-          <div className="flex flex-col">
-            <span className="text-[7px] font-black uppercase text-slate-400 tracking-wider leading-none">Prędkość</span>
-            <div className="flex items-baseline gap-0.5">
-              <span className="font-mono text-base font-black text-white leading-tight">{mySpeed || 0}</span>
-              <span className="text-[8px] font-bold text-slate-400">km/h</span>
-            </div>
-          </div>
-        </div>
-
-        {myPlayer && zone && (
-          <div className={`px-2.5 py-1 rounded-xl glass-panel text-[10px] font-bold shadow-xl border flex items-center gap-1.5 pointer-events-auto self-start ${
-            myPlayer.isOutOfZone
-              ? 'border-rose-500 text-rose-300 bg-rose-950/60 animate-pulse'
-              : 'border-emerald-500/40 text-emerald-300 bg-slate-950/80'
-          }`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${myPlayer.isOutOfZone ? 'bg-rose-500 animate-ping' : 'bg-emerald-400'}`}></span>
-            <span>
-              {myPlayer.isOutOfZone
-                ? (myPlayer.zonePenaltyActive ? 'KARA: POZYCJA ODSŁONIĘTA!' : `POZA STREFĄ (${myPlayer.outOfZoneSecondsLeft || 0}s)`)
-                : isMovingZoneMode ? 'W AKTYWNEJ STREFIE' : 'W STREFIE GRY'}
-            </span>
-          </div>
-        )}
-      </div>
-
       <MapContainer
         center={[defaultCenter.lat, defaultCenter.lng]}
         zoom={14}
+        zoomControl={false}
+        attributionControl={false}
         scrollWheelZoom={true}
         className="w-full h-full"
       >

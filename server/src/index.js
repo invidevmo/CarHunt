@@ -162,6 +162,24 @@ io.on('connection', (socket) => {
     if (typeof callback === 'function') callback(res);
   });
 
+  socket.on('send_chat', ({ roomCode, text }, callback) => {
+    try {
+      const res = gameManager.addChatMessage(roomCode, socket.id, text);
+      if (typeof callback === 'function') callback(res);
+    } catch (err) {
+      if (typeof callback === 'function') callback({ error: err.message });
+    }
+  });
+
+  socket.on('end_game', ({ roomCode }, callback) => {
+    try {
+      const res = gameManager.forceEndGame(roomCode, socket.id);
+      if (typeof callback === 'function') callback(res);
+    } catch (err) {
+      if (typeof callback === 'function') callback({ error: err.message });
+    }
+  });
+
   socket.on('reset_to_lobby', ({ roomCode }) => {
     gameManager.resetToLobby(roomCode, socket.id);
   });

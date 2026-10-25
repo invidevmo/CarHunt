@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { MapComponent } from './MapComponent';
 import { HiderQrModal } from './HiderQrModal';
 import { SeekerScannerModal } from './SeekerScannerModal';
 import { HudModeOverlay } from './HudModeOverlay';
+import { RoomChatModal } from './RoomChatModal';
+import { GameHistoryModal } from './GameHistoryModal';
 import { calculateProximity } from '../utils/proximity';
 import { LicensePlate } from './LicensePlate';
 import { 
@@ -20,7 +22,12 @@ import {
   CheckCircle2, 
   Radio, 
   Gauge, 
-  Crosshair
+  MessageSquare,
+  History,
+  Flag,
+  RotateCcw,
+  Crown,
+  X
 } from 'lucide-react';
 import { sounds } from '../utils/audio';
 
@@ -32,6 +39,9 @@ export function GameView({
   gpsSpeed,
   onMapClick,
   onScanCatchCode,
+  onSendMessage,
+  onEndGame,
+  onResetToLobby,
   autoCenter,
   setAutoCenter,
 }) {
@@ -39,15 +49,37 @@ export function GameView({
   const [showQrModal, setShowQrModal] = useState(false);
   const [showScannerModal, setShowScannerModal] = useState(false);
   const [showHudMode, setShowHudMode] = useState(false);
+  const [showChat, setShowChat] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [showCaptainModal, setShowCaptainModal] = useState(false);
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [catchError, setCatchError] = useState(null);
   const [catchSuccess, setCatchSuccess] = useState(null);
+
+  const prevMsgCountRef = useRef(room.messages?.length || 0);
 
   const isHider = myPlayer?.role === 'HIDER';
   const isSeeker = myPlayer?.role === 'SEEKER';
   const isCaught = myPlayer?.isCaught;
   const isHunting = room.state === 'HUNTING';
   const isHidingPhase = room.state === 'HIDING';
+
+  useEffect(() => {
+    const currentCount = room.messages?.length || 0;
+    if (currentCount > prevMsgCountRef.current) {
+      if (!showChat) {
+        setUnreadChatCount((prev) => prev + (currentCount - prevMsgCountRef.current));
+      }
+    }
+    prevMsgCountRef.current = currentCount;
+  }, [room.messages, showChat]);
+
+  useEffect(() => {
+    if (room.timeRemaining <= 5 && room.timeRemaining > 0) {
+      sounds.playCountdownTick(room.timeRemaining <= 1);
+    }
+  }, [room.timeRemaining]);
 
   const proximity = calculateProximity({
     myPosition,
@@ -90,6 +122,28 @@ export function GameView({
         setTimeout(() => setCatchSuccess(null), 6000);
       }
     });
+  };
+
+  const renderEventBadge = (text) => {
+    if (text.startsWith('[RADAR]')) {
+      return <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono text-[9px] font-black shrink-0">RADAR</span>;
+    }
+    if (text.startsWith('[STREFA') || text.startsWith('[RUCH')) {
+      return <span className="px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-mono text-[9px] font-black shrink-0">STREFA</span>;
+    }
+    if (text.startsWith('[KARA')) {
+      return <span className="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 font-mono text-[9px] font-black shrink-0">KARA</span>;
+    }
+    if (text.startsWith('[SKAN') || text.startsWith('[SCHWYTANIE]')) {
+      return <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono text-[9px] font-black shrink-0">SKAN</span>;
+    }
+    if (text.startsWith('[CZAT]')) {
+      return <span className="px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 font-mono text-[9px] font-black shrink-0">RADIO</span>;
+    }
+    if (text.startsWith('[POLOWANIE') || text.startsWith('[START]')) {
+      return <span className="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 font-mono text-[9px] font-black shrink-0">FAZA</span>;
+    }
+    return <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-mono text-[9px] font-bold shrink-0">INFO</span>;
   };
 
   return (
@@ -143,12 +197,29 @@ export function GameView({
             </button>
 
             <button
+              onClick={() => {
+                setShowChat(true);
+                setUnreadChatCount(0);
+              }}
+              className="relative p-1.5 sm:p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800/80 transition cursor-pointer"
+              title="Czat pokoju"
+            >
+              <MessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400" />
+              {unreadChatCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center animate-bounce shadow">
+                  {unreadChatCount}
+                </span>
+              )}
+            </button>
+
+            <button
               onClick={toggleSound}
               className="p-1.5 sm:p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800/80 transition cursor-pointer"
               title="Dźwięk"
             >
               {soundEnabled ? <Volume2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400" /> : <VolumeX className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-500" />}
             </button>
+
             <button
               onClick={() => setAutoCenter(!autoCenter)}
               className={`p-1.5 sm:p-2 rounded-xl transition cursor-pointer ${autoCenter ? 'text-amber-400 bg-amber-400/10' : 'text-slate-400 hover:bg-slate-800/80'}`}
@@ -156,6 +227,7 @@ export function GameView({
             >
               <LocateFixed className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </button>
+
             <button
               onClick={() => setShowEvents(!showEvents)}
               className="p-1.5 sm:p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800/80 transition cursor-pointer"
@@ -163,6 +235,17 @@ export function GameView({
             >
               <ListOrdered className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </button>
+
+            {myPlayer?.isHost && (
+              <button
+                onClick={() => setShowCaptainModal(true)}
+                className="px-2 sm:px-2.5 py-1.5 rounded-xl bg-rose-600/90 hover:bg-rose-500 text-white font-black text-xs flex items-center gap-1 shadow-lg shadow-rose-600/30 active:scale-95 transition cursor-pointer border border-rose-400/40 ml-0.5"
+                title="Panel Kapitana (Zakończ grę w dowolnym momencie)"
+              >
+                <Flag className="w-3.5 h-3.5 text-white" />
+                <span className="hidden sm:inline">Koniec</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -178,7 +261,7 @@ export function GameView({
                   ? (proximity.isInsideCircle ? 'bg-rose-500/20 text-rose-400 animate-pulse' : 'bg-purple-500/20 text-purple-300') 
                   : (proximity.isInsideCircle ? 'bg-emerald-500/20 text-emerald-400 animate-pulse' : 'bg-cyan-500/20 text-cyan-300')
               }`}>
-                {isHider ? <Radio className="w-4 h-4" /> : <Crosshair className="w-4 h-4" />}
+                {isHider ? <Radio className="w-4 h-4" /> : <Shield className="w-4 h-4" />}
               </div>
 
               <div className="text-left min-w-0">
@@ -337,12 +420,21 @@ export function GameView({
             <h3 className="font-bold text-sm text-white flex items-center gap-2">
               <ListOrdered className="w-4 h-4 text-amber-400" /> Dziennik zdarzeń rozgrywki
             </h3>
-            <button
-              onClick={() => setShowEvents(false)}
-              className="p-1 rounded-lg bg-slate-800 text-slate-400 hover:text-white cursor-pointer"
-            >
-              <ChevronDown className="w-5 h-5" />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowHistory(true)}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 text-xs font-bold transition cursor-pointer"
+              >
+                <History className="w-3.5 h-3.5" />
+                <span>Historia</span>
+              </button>
+              <button
+                onClick={() => setShowEvents(false)}
+                className="p-1 rounded-lg bg-slate-800 text-slate-400 hover:text-white cursor-pointer"
+              >
+                <ChevronDown className="w-5 h-5" />
+              </button>
+            </div>
           </div>
 
           <div className="flex-1 overflow-y-auto py-3 space-y-2 text-xs">
@@ -350,9 +442,10 @@ export function GameView({
               <div className="text-center text-slate-500 py-8">Brak wpisów w dzienniku</div>
             ) : (
               room.events.slice().reverse().map((ev) => (
-                <div key={ev.id} className="p-2 rounded-xl bg-slate-950/70 border border-slate-800 flex gap-2">
+                <div key={ev.id} className="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800 flex items-start gap-2">
                   <span className="font-mono text-slate-500 text-[10px] shrink-0 mt-0.5">{ev.time}</span>
-                  <span className="text-slate-300">{ev.text}</span>
+                  {renderEventBadge(ev.text)}
+                  <span className="text-slate-200 flex-1 leading-snug">{ev.text.replace(/^\[[^\]]+\]\s*/, '')}</span>
                 </div>
               ))
             )}
@@ -360,10 +453,29 @@ export function GameView({
         </div>
       )}
 
+      {showChat && (
+        <RoomChatModal
+          roomCode={room.code}
+          myPlayer={myPlayer}
+          messages={room.messages || []}
+          onSendMessage={onSendMessage}
+          onClose={() => {
+            setShowChat(false);
+            setUnreadChatCount(0);
+          }}
+        />
+      )}
+
+      {showHistory && (
+        <GameHistoryModal
+          history={room.history || []}
+          onClose={() => setShowHistory(false)}
+        />
+      )}
+
       {showQrModal && (
         <HiderQrModal
           myPlayer={myPlayer}
-          roomCode={room.code}
           onClose={() => setShowQrModal(false)}
         />
       )}
@@ -389,6 +501,75 @@ export function GameView({
           onOpenScanner={() => setShowScannerModal(true)}
           onOpenQr={() => setShowQrModal(true)}
         />
+      )}
+
+      {showCaptainModal && (
+        <div className="fixed inset-0 z-[2800] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 select-none">
+          <div className="w-full max-w-sm glass-panel border border-rose-500/30 rounded-3xl p-5 space-y-4 shadow-2xl relative overflow-hidden">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-rose-500/20 text-rose-400 border border-rose-500/30">
+                  <Crown className="w-4 h-4 text-amber-400" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-black uppercase tracking-wider text-white">Panel Kapitana</h3>
+                  <span className="text-[10px] text-slate-400">Zarządzanie trwającą rozgrywką</span>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowCaptainModal(false)}
+                className="p-1 rounded-xl text-slate-400 hover:text-white cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Jako Kapitan możesz w każdej chwili zakończyć lub przerwać trwającą rundę:
+            </p>
+
+            <div className="space-y-2 pt-1">
+              <button
+                onClick={() => {
+                  setShowCaptainModal(false);
+                  if (onEndGame) onEndGame();
+                }}
+                className="w-full py-3 px-3.5 rounded-2xl bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 hover:from-rose-500 hover:to-red-500 text-white font-black text-xs uppercase flex items-center justify-center gap-2 shadow-lg shadow-rose-600/30 cursor-pointer active:scale-95 transition border border-rose-400/40"
+              >
+                <Flag className="w-4 h-4" />
+                <span>Zakończ i Podsumuj Rundę</span>
+              </button>
+              <span className="text-[10px] text-slate-400 block text-center px-1">
+                Wyłania zwycięzców na podstawie obecnego stanu, odsłania kryjówki na mapie i zapisuje rundę w historii.
+              </span>
+
+              <div className="pt-2">
+                <button
+                  onClick={() => {
+                    setShowCaptainModal(false);
+                    if (onResetToLobby) onResetToLobby();
+                  }}
+                  className="w-full py-2.5 px-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition border border-white/10"
+                >
+                  <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Przerwij i Wróć do Poczekalni</span>
+                </button>
+                <span className="text-[10px] text-slate-500 block text-center px-1 mt-0.5">
+                  Natychmiast anuluje grę bez zapisu i przenosi załogi do poczekalni.
+                </span>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-white/10">
+              <button
+                onClick={() => setShowCaptainModal(false)}
+                className="w-full py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition cursor-pointer"
+              >
+                Wróć do Gry (Graj Dalej)
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

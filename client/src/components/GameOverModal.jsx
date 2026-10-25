@@ -9,13 +9,16 @@ import {
   Map, 
   Maximize2,
   Shield,
-  Crown
+  Crown,
+  History
 } from 'lucide-react';
 import { sounds } from '../utils/audio';
 import { LicensePlate } from './LicensePlate';
+import { GameHistoryModal } from './GameHistoryModal';
 
 export function GameOverModal({ room, myPlayer, onResetToLobby }) {
   const [minimized, setMinimized] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const isWinnerSeekers = room.winner === 'SEEKERS';
   const isHost = myPlayer?.isHost;
 
@@ -177,13 +180,23 @@ export function GameOverModal({ room, myPlayer, onResetToLobby }) {
         </div>
 
         <div className="space-y-2 pt-1">
-          <button
-            onClick={() => setMinimized(true)}
-            className="w-full py-3.5 px-4 rounded-xl font-bold bg-slate-800 hover:bg-slate-700 text-white border border-slate-600 transition flex items-center justify-center gap-2 cursor-pointer shadow-lg active:scale-[0.98]"
-          >
-            <Map className="w-4 h-4 text-emerald-400" />
-            <span>Pokaż kryjówki uciekinierów na mapie</span>
-          </button>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => setMinimized(true)}
+              className="py-3 px-3 rounded-xl font-bold bg-slate-800 hover:bg-slate-700 text-white border border-slate-600 transition flex items-center justify-center gap-1.5 cursor-pointer shadow-lg active:scale-[0.98] text-xs"
+            >
+              <Map className="w-4 h-4 text-emerald-400" />
+              <span>Mapa kryjówek</span>
+            </button>
+
+            <button
+              onClick={() => setShowHistory(true)}
+              className="py-3 px-3 rounded-xl font-bold bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-600 transition flex items-center justify-center gap-1.5 cursor-pointer shadow-lg active:scale-[0.98] text-xs"
+            >
+              <History className="w-4 h-4 text-cyan-400" />
+              <span>Historia gier</span>
+            </button>
+          </div>
 
           {isHost ? (
             <button
@@ -200,6 +213,13 @@ export function GameOverModal({ room, myPlayer, onResetToLobby }) {
           )}
         </div>
       </div>
+
+      {showHistory && (
+        <GameHistoryModal
+          history={room.history || []}
+          onClose={() => setShowHistory(false)}
+        />
+      )}
     </div>
   );
 }
