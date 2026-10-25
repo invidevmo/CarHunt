@@ -1,0 +1,157 @@
+@import "leaflet/dist/leaflet.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
+  min-height: -webkit-fill-available;
+  background-color: #060913;
+  color: #f8fafc;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  overflow-x: hidden;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+  overscroll-behavior-x: none;
+  background-image: 
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(56, 189, 248, 0.12), transparent),
+    radial-gradient(ellipse 60% 40% at 50% 120%, rgba(168, 85, 247, 0.08), transparent);
+  background-attachment: fixed;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Prevent iOS Safari auto-zoom on input focus */
+input, select, textarea {
+  font-size: 16px !important;
+  touch-action: manipulation;
+}
+@media (min-width: 640px) {
+  input, select, textarea {
+    font-size: 0.875rem !important;
+  }
+}
+
+/* Mobile Safe Area Inset Helpers for iOS Dynamic Island & Bottom Bar */
+.pt-safe {
+  padding-top: max(0.5rem, env(safe-area-inset-top, 0.5rem));
+}
+
+.pb-safe {
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0.75rem));
+}
+
+.pl-safe {
+  padding-left: max(0.5rem, env(safe-area-inset-left, 0.5rem));
+}
+
+.pr-safe {
+  padding-right: max(0.5rem, env(safe-area-inset-right, 0.5rem));
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0b0f19;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+/* Glassmorphism utility */
+.glass-panel {
+  background: rgba(13, 18, 30, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-card {
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Custom Leaflet Map styling */
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  min-height: 0 !important;
+  background: #060913 !important;
+  touch-action: pan-x pan-y;
+}
+
+/* Custom Car Marker Styling */
+.car-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.car-marker:hover {
+  transform: scale(1.1);
+  z-index: 1000 !important;
+}
+
+.radar-ping-circle {
+  animation: radar-pulse 2.2s infinite ease-out;
+}
+
+@keyframes radar-pulse {
+  0% {
+    fill-opacity: 0.45;
+    stroke-opacity: 0.9;
+  }
+  50% {
+    fill-opacity: 0.15;
+    stroke-opacity: 0.35;
+  }
+  100% {
+    fill-opacity: 0.45;
+    stroke-opacity: 0.9;
+  }
+}
+
+/* Glow effects */
+.glow-cyan {
+  box-shadow: 0 0 25px rgba(56, 189, 248, 0.35);
+}
+
+.glow-purple {
+  box-shadow: 0 0 25px rgba(168, 85, 247, 0.35);
+}
+
+.glow-amber {
+  box-shadow: 0 0 25px rgba(245, 158, 11, 0.35);
+}
+
+.glow-red {
+  box-shadow: 0 0 30px rgba(239, 68, 68, 0.4);
+}

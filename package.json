@@ -1,0 +1,31 @@
+{
+  "name": "carhunt-gps",
+  "version": "1.0.0",
+  "description": "Real-time GPS vehicle hide-and-seek battle royale telematics platform",
+  "main": "server/src/index.js",
+  "scripts": {
+    "build": "npm install --prefix client && npm run build --prefix client && npm install --prefix server",
+    "start": "node server/src/index.js",
+    "dev:server": "cd server && npm run dev",
+    "dev:client": "cd client && npm run dev",
+    "lint": "npm run lint --prefix client"
+  },
+  "keywords": [
+    "car-hunt",
+    "carhunt",
+    "hide-and-seek",
+    "gps",
+    "telematics",
+    "leaflet",
+    "socketio",
+    "react19",
+    "battle-royale",
+    "gaming"
+  ],
+  "author": "Wiktor \"Kehoyooon\" Augustyniak",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Kehoyooon/carhunt-gps"
+  }
+}
