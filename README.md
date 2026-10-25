@@ -62,9 +62,9 @@
 
 ### 7. 🗺️ Darmowa Infrastruktura Mapowa (Zero Opłat API)
 * Zintegrowane szybkie kafelki bez limitów zapytań:
-  * **Tryb Ciemny (Dark Matter CartoDB / OSM)** – wysoki kontrast i czytelność w nocy.
+  * **Tryb Ciemny (Tactical Cyber OSM)** – wysoki kontrast i czytelność w nocy dzięki filtrowi cyfrowemu.
   * **Tryb Satelitarny (Esri World Imagery)** – widok rzeczywistych parkingów, uliczek i zaułków.
-  * **Tryb Dzienny (Voyager CartoDB)** – jasny motyw drogowy.
+  * **Tryb Dzienny (OpenStreetMap Standard)** – jasny motyw drogowy.
 
 ---
 

@@ -164,10 +164,11 @@ export function ZoneConfigModal({
             className="w-full h-full"
           >
             <TileLayer
-              url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-              subdomains="abcd"
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              subdomains="abc"
               maxZoom={19}
-              attribution='&copy; CARTO'
+              className="map-tiles-dark"
+              attribution='&copy; OpenStreetMap contributors'
             />
             <ZoneMapEvents onCenterSelect={setCenter} />
             <ZoneMapRecenter center={center} />

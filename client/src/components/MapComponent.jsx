@@ -221,19 +221,19 @@ export function MapComponent({
     }
     if (mapLayer === 'street') {
       return {
-        url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-        attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-        subdomains: 'abcd',
+        url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        attribution: '&copy; OpenStreetMap contributors',
+        subdomains: 'abc',
         className: '',
-        maxZoom: 20,
+        maxZoom: 19,
       };
     }
     return {
-      url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-      attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-      subdomains: 'abcd',
-      className: '',
-      maxZoom: 20,
+      url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+      attribution: '&copy; OpenStreetMap contributors',
+      subdomains: 'abc',
+      className: 'map-tiles-dark',
+      maxZoom: 19,
     };
   };
 
@@ -268,7 +268,7 @@ export function MapComponent({
         )}
       </div>
 
-      <div className="absolute bottom-24 sm:bottom-28 left-3 z-[1000] pointer-events-none flex flex-col gap-1.5 max-w-[280px]">
+      <div className="absolute bottom-28 sm:bottom-32 left-3 z-[900] pointer-events-none flex flex-col gap-2 max-w-[280px]">
         {nextZone && (
           <div className="glass-panel px-3 py-2 rounded-2xl shadow-2xl border-amber-400/50 bg-amber-950/80 pointer-events-auto flex items-center gap-2 text-white animate-pulse">
             <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping shrink-0" />

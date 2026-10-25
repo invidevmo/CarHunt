@@ -139,6 +139,11 @@ input, select, textarea {
   }
 }
 
+/* Tactical Dark Tile Filter for OpenStreetMap (100% Free, Zero API Keys, Zero Watermarks) */
+.leaflet-container .map-tiles-dark {
+  filter: invert(100%) hue-rotate(195deg) brightness(85%) contrast(135%) grayscale(35%) !important;
+}
+
 /* Glow effects */
 .glow-cyan {
   box-shadow: 0 0 25px rgba(56, 189, 248, 0.35);
